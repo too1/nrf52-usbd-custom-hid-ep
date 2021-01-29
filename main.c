@@ -400,6 +400,8 @@ static const uint8_t get_status_interface_resp[] = {0, 0};
 static const uint8_t get_status_ep_halted_resp[] = {1, 0};
 static const uint8_t get_status_ep_active_resp[] = {0, 0};
 
+static void prepare_epout2_receive(void);
+static void receive_custom_data(void);
 
 #define GET_CONFIG_DESC_SIZE    sizeof(get_descriptor_configuration)
 #define GET_INTERFACE_DESC_SIZE 9
@@ -512,6 +514,8 @@ static ret_code_t ep_configuration(uint8_t index)
         nrf_drv_usbd_ep_dtoggle_clear(NRF_DRV_USBD_EPOUT2);
         nrf_drv_usbd_ep_stall_clear(NRF_DRV_USBD_EPOUT2);
         nrf_drv_usbd_ep_enable(NRF_DRV_USBD_EPOUT2);
+
+        prepare_epout2_receive();
 
         m_usbd_configured = true;
         nrf_drv_usbd_setup_clear();
@@ -958,6 +962,7 @@ static void usbd_event_handler(nrf_drv_usbd_evt_t const * const p_event)
         else if (NRF_DRV_USBD_EPOUT2 == p_event->data.eptransfer.ep)
         {
             NRF_LOG_INFO("EP2OUT transfer complete");
+            receive_custom_data();
         }
         else if (NRF_DRV_USBD_EPIN1 == p_event->data.eptransfer.ep)
         {
@@ -1125,6 +1130,26 @@ static void send_custom_data(void)
         &transfer));
 }
 
+static uint8_t epout2_data_buffer[64];
+
+static void prepare_epout2_receive(void)
+{
+    static const nrf_drv_usbd_transfer_t transfer =
+    {
+        .p_data = {.tx = epout2_data_buffer},
+        .size = 64
+    };
+    nrfx_err_t err = nrfx_usbd_ep_transfer(NRF_DRV_USBD_EPOUT2, &transfer);
+    APP_ERROR_CHECK(err);
+}
+
+static void receive_custom_data(void)
+{
+    NRF_LOG_INFO("Data received on EPOUT2");
+    NRF_LOG_HEXDUMP_INFO(epout2_data_buffer, 64);
+
+    prepare_epout2_receive();
+}
 static void power_usb_event_handler(nrf_drv_power_usb_evt_t event)
 {
     switch (event)
