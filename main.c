@@ -66,7 +66,7 @@ NRF_CLI_DEF(m_cli_uart,
             '\r',
             4);
 
-static bool m_send_flag = 0;
+static bool m_send_flag = 0, m_send_custom_flag = 0;
 
 #define BTN_DATA_SEND               0
 #define BTN_CUSTOM_DATA_SEND        1
@@ -144,8 +144,8 @@ static bool m_send_flag = 0;
     0x00,                        /* bDeviceSubClass ¦ device sub-class (must be set to 0 because class code is 0) */\
     0x00,                        /* bDeviceProtocol | device protocol (no class specific protocol)                */\
     EP0_MAXPACKETSIZE,           /* bMaxPacketSize0 | maximum packet size (64 bytes)                              */\
-    0x27, 0x27,                  /* vendor ID  (0x1915 Nordic)                                                    */\
-    0x0A, 0x52,                  /* product ID (0x520A nRF52 HID mouse on nrf_drv)                                */\
+    0x15, 0x19,                  /* vendor ID  (0x1915 Nordic)                                                    */\
+    0x0B, 0x52,                  /* product ID (0x520B nRF52 HID mouse on nrf_drv)                                */\
     0x01, 0x01,                  /* bcdDevice | final device release number in BCD Format                         */\
     USBD_STRING_MANUFACTURER_IX, /* iManufacturer | index of manufacturer string                                  */\
     USBD_STRING_PRODUCT_IX,      /* iProduct | index of product string                                            */\
@@ -157,7 +157,7 @@ static bool m_send_flag = 0;
 #define REMOTE_WU           1
 
 #define USBD_CONFIG_DESCRIPTOR_SIZE   9
-#define USBD_CONFIG_DESCRIPTOR_FULL_SIZE   (9 + (9 + 9 + 7) + (9 + 9 + 7 + 7))
+#define USBD_CONFIG_DESCRIPTOR_FULL_SIZE   (9 + (9 + 9 + 7) + (9 + 9 + 7 + 7)) // 66
 #define USBD_CONFIG_DESCRIPTOR  \
     0x09,         /* bLength | length of descriptor                                             */\
     0x02,         /* bDescriptorType | descriptor type (CONFIGURATION)                          */\
@@ -206,7 +206,7 @@ static bool m_send_flag = 0;
     0x04,         /* bDescriptorType | descriptor type (INTERFACE)                                    */\
     0x01,         /* bInterfaceNumber                                                                 */\
     0x00,         /* bAlternateSetting                                                                */\
-    0x02,         /* bNumEndpoints | number of endpoints (1)                                          */\
+    0x02,         /* bNumEndpoints | number of endpoints (2)                                          */\
     0x03,         /* bInterfaceClass | interface class (3..defined by USB spec: HID)                  */\
     0x00,         /* bInterfaceSubClass |interface sub-class (0.. no boot interface)                  */\
     0x00,         /* bInterfaceProtocol | interface protocol (1..defined by USB spec: mouse)          */\
@@ -227,7 +227,7 @@ static bool m_send_flag = 0;
     0x05,         /* bDescriptorType | descriptor type (ENDPOINT)                                 */\
     0x82,         /* bEndpointAddress | endpoint address (IN endpoint, endpoint 2)                */\
     0x03,         /* bmAttributes | endpoint attributes (interrupt)                               */\
-    0x20,0x00,    /* bMaxPacketSizeLowByte,bMaxPacketSizeHighByte | maximum packet size (32 bytes) */\
+    0x40,0x00,    /* bMaxPacketSizeLowByte,bMaxPacketSizeHighByte | maximum packet size (64 bytes) */\
     0x08          /* bInterval | polling interval (10ms)    */   
 
 #define USBD_ENDPOINT2_OUT_DESCRIPTOR  \
@@ -235,7 +235,7 @@ static bool m_send_flag = 0;
     0x05,         /* bDescriptorType | descriptor type (ENDPOINT)                                 */\
     0x02,         /* bEndpointAddress | endpoint address (OUT endpoint, endpoint 2)                */\
     0x03,         /* bmAttributes | endpoint attributes (interrupt)                               */\
-    0x20,0x00,    /* bMaxPacketSizeLowByte,bMaxPacketSizeHighByte | maximum packet size (32 bytes) */\
+    0x40,0x00,    /* bMaxPacketSizeLowByte,bMaxPacketSizeHighByte | maximum packet size (64 bytes) */\
     0x08          /* bInterval | polling interval (10ms)    */   
 
 /**
@@ -275,7 +275,7 @@ static bool m_send_flag = 0;
 
 #define USBD_STRING_PRODUCT_IX  0x02
 #define USBD_STRING_PRODUCT \
-    72,           /* length of descriptor (? bytes)         */\
+    69,           /* length of descriptor (? bytes)         */\
     0x03,         /* descriptor type                        */\
     'n', 0x00,    /* generic unicode string for all devices */\
     'R', 0x00, \
@@ -297,21 +297,18 @@ static bool m_send_flag = 0;
     's', 0x00, \
     'e', 0x00, \
     ' ', 0x00, \
+    'w', 0x00, \
+    ' ', 0x00, \
+    ' ', 0x00, \
+    'c', 0x00, \
+    'u', 0x00, \
+    's', 0x00, \
+    't', 0x00, \
     'o', 0x00, \
-    'n', 0x00, \
-    ' ', 0x00, \
-    'n', 0x00, \
-    'r', 0x00, \
-    'f', 0x00, \
-    '_', 0x00, \
-    'd', 0x00, \
-    'r', 0x00, \
-    'v', 0x00, \
-    ' ', 0x00, \
-    'D', 0x00, \
-    'e', 0x00, \
     'm', 0x00, \
-    'o', 0x00, \
+    ' ', 0x00, \
+    'E', 0x00, \
+    'P', 0x00, \
 
 #define USBD_STRING_SERIAL_IX  0x00
 
@@ -342,7 +339,7 @@ static bool m_send_flag = 0;
     0xC0,           /* end collection                                                               */\
     0xC0            /* End Collection                                                               */
 
-#define USBD_CUSTOM_REPORT_DESCRIPTOR_SIZE  46
+#define USBD_CUSTOM_REPORT_DESCRIPTOR_SIZE  25
 #define USBD_CUSTOM_REPORT_DESCRIPTOR \
     0x06, 0x00, 0xff,              /* USAGE_PAGE (Vendor Defined Page 1)*/\
     0x09, 0x01,                    /* USAGE (Vendor Usage 1)*/\
@@ -382,6 +379,9 @@ static const uint8_t get_descriptor_string_prod[] = {
 };
 static const uint8_t get_descriptor_report_interface_0[] = {
     USBD_MOUSE_REPORT_DESCRIPTOR
+};
+static const uint8_t get_descriptor_report_interface_1[] = {
+    USBD_CUSTOM_REPORT_DESCRIPTOR
 };
 
 static const uint8_t get_config_resp_configured[]   = {1};
@@ -504,12 +504,24 @@ static ret_code_t ep_configuration(uint8_t index)
         nrf_drv_usbd_ep_dtoggle_clear(NRF_DRV_USBD_EPIN1);
         nrf_drv_usbd_ep_stall_clear(NRF_DRV_USBD_EPIN1);
         nrf_drv_usbd_ep_enable(NRF_DRV_USBD_EPIN1);
+        
+        nrf_drv_usbd_ep_dtoggle_clear(NRF_DRV_USBD_EPIN2);
+        nrf_drv_usbd_ep_stall_clear(NRF_DRV_USBD_EPIN2);
+        nrf_drv_usbd_ep_enable(NRF_DRV_USBD_EPIN2);
+
+        nrf_drv_usbd_ep_dtoggle_clear(NRF_DRV_USBD_EPOUT2);
+        nrf_drv_usbd_ep_stall_clear(NRF_DRV_USBD_EPOUT2);
+        nrf_drv_usbd_ep_enable(NRF_DRV_USBD_EPOUT2);
+
         m_usbd_configured = true;
         nrf_drv_usbd_setup_clear();
     }
     else if ( index == 0 )
     {
         nrf_drv_usbd_ep_disable(NRF_DRV_USBD_EPIN1);
+        nrf_drv_usbd_ep_disable(NRF_DRV_USBD_EPIN2);
+        nrf_drv_usbd_ep_disable(NRF_DRV_USBD_EPOUT2);
+
         m_usbd_configured = false;
         nrf_drv_usbd_setup_clear();
     }
@@ -696,10 +708,13 @@ static void usbd_setup_SetFeature(nrf_drv_usbd_setup_t const * const p_setup)
 
 static void usbd_setup_GetDescriptor(nrf_drv_usbd_setup_t const * const p_setup)
 {
-    NRF_LOG_INFO("getDescriptor 0x%02x, type: 0x%02x value: 0x%02x",
+    NRF_LOG_INFO("getDesc 0x%02x, type: 0x%02x, request: 0x%02x, value: 0x%02x index: 0x%04x len: 0x%04x",
         p_setup->wValue >> 8,
         p_setup->bmRequestType,
-        p_setup->wValue & 0xFF);
+        p_setup->bRequest,
+        p_setup->wValue & 0xFF,
+        p_setup->wIndex,
+        p_setup->wLength);
     //determine which descriptor has been asked for
     switch ((p_setup->wValue) >> 8)
     {
@@ -799,11 +814,22 @@ static void usbd_setup_GetDescriptor(nrf_drv_usbd_setup_t const * const p_setup)
             // Which interface?
             if (((p_setup->wValue) & 0xFF) == 0)
             {
-                respond_setup_data(
-                    p_setup,
-                    get_descriptor_report_interface_0,
-                    sizeof(get_descriptor_report_interface_0));
-                return;
+                if ((p_setup->wIndex) == 0)
+                {
+                    respond_setup_data(
+                        p_setup,
+                        get_descriptor_report_interface_0,
+                        sizeof(get_descriptor_report_interface_0));
+                    return;
+                }
+                else if ((p_setup->wIndex) == 1)
+                {
+                    respond_setup_data(
+                        p_setup,
+                        get_descriptor_report_interface_1,
+                        sizeof(get_descriptor_report_interface_1));
+                    return;
+                }
             }
         }
         break;
@@ -928,12 +954,19 @@ static void usbd_event_handler(nrf_drv_usbd_evt_t const * const p_event)
             break;
         }
     case NRF_DRV_USBD_EVT_EPTRANSFER:
-        if (NRF_DRV_USBD_EPIN1 == p_event->data.eptransfer.ep)
+        if (NRF_DRV_USBD_EPIN2 == p_event->data.eptransfer.ep)
+        {
+            NRF_LOG_INFO("EP2IN transfer complete");
+        }
+        else if (NRF_DRV_USBD_EPOUT2 == p_event->data.eptransfer.ep)
+        {
+            NRF_LOG_INFO("EP2OUT transfer complete");
+        }
+        else if (NRF_DRV_USBD_EPIN1 == p_event->data.eptransfer.ep)
         {
             m_send_mouse_position = false;
         }
-        else
-        if (NRF_DRV_USBD_EPIN0 == p_event->data.eptransfer.ep)
+        else if (NRF_DRV_USBD_EPIN0 == p_event->data.eptransfer.ep)
         {
             if (NRF_USBD_EP_OK == p_event->data.eptransfer.status)
             {
@@ -951,8 +984,7 @@ static void usbd_event_handler(nrf_drv_usbd_evt_t const * const p_event)
                 nrf_drv_usbd_setup_stall();
             }
         }
-        else
-        if (NRF_DRV_USBD_EPOUT0 == p_event->data.eptransfer.ep)
+        else if (NRF_DRV_USBD_EPOUT0 == p_event->data.eptransfer.ep)
         {
             /* NOTE: No EPOUT0 data transfers are used.
              * The code is here as a pattern how to support such a transfer. */
@@ -974,6 +1006,7 @@ static void usbd_event_handler(nrf_drv_usbd_evt_t const * const p_event)
         }
         else
         {
+            NRF_LOG_INFO("Unknown EPTRANSFER event");
             /* Nothing to do */
         }
         break;
@@ -1078,6 +1111,23 @@ static void move_mouse_pointer(void)
     }
 }
 
+static void send_custom_data(void)
+{
+    static uint8_t counter = 0;
+    static uint8_t buffer[64];
+    buffer[0] = counter++;
+
+    /* Send data */
+    static const nrf_drv_usbd_transfer_t transfer =
+    {
+        .p_data = {.tx = buffer},
+        .size = 64
+    };
+    UNUSED_RETURN_VALUE(nrf_drv_usbd_ep_transfer(
+        NRF_DRV_USBD_EPIN2,
+        &transfer));
+}
+
 static void power_usb_event_handler(nrf_drv_power_usb_evt_t event)
 {
     switch (event)
@@ -1132,7 +1182,11 @@ static void bsp_evt_handler(bsp_event_t evt)
         m_send_flag = 1;
         break;
     }
-
+    case CONCAT_2(BSP_EVENT_KEY_, BTN_CUSTOM_DATA_SEND):
+    {
+        m_send_custom_flag = 1;
+        break;
+    }
     case BTN_DATA_KEY_RELEASE:
     {
         m_send_flag = 0;
@@ -1181,6 +1235,12 @@ static void init_bsp(void)
                                             BSP_BUTTON_ACTION_RELEASE,
                                             BTN_DATA_KEY_RELEASE);
     APP_ERROR_CHECK(ret);
+
+    ret = bsp_event_to_button_action_assign(BTN_CUSTOM_DATA_SEND,
+                                            BSP_BUTTON_ACTION_RELEASE,
+                                            BTN_DATA_KEY_RELEASE);
+    APP_ERROR_CHECK(ret);
+    
     /* Avoid warnings if assertion is disabled */
     UNUSED_VARIABLE(ret);
 }
@@ -1361,6 +1421,12 @@ int main(void)
                     NRF_LOG_INFO("   TX pointer");
                     move_mouse_pointer();
                 }
+            }
+            if (m_send_custom_flag)
+            {
+                m_send_custom_flag = 0;
+                NRF_LOG_INFO("Sending custom data...");
+                send_custom_data();
             }
         }
 
