@@ -708,13 +708,10 @@ static void usbd_setup_SetFeature(nrf_drv_usbd_setup_t const * const p_setup)
 
 static void usbd_setup_GetDescriptor(nrf_drv_usbd_setup_t const * const p_setup)
 {
-    NRF_LOG_INFO("getDesc 0x%02x, type: 0x%02x, request: 0x%02x, value: 0x%02x index: 0x%04x len: 0x%04x",
-        p_setup->wValue >> 8,
-        p_setup->bmRequestType,
-        p_setup->bRequest,
-        p_setup->wValue & 0xFF,
-        p_setup->wIndex,
-        p_setup->wLength);
+    //NRF_LOG_INFO("getDesc 0x%02x, type: 0x%02x, request: 0x%02x, value: 0x%02x index: 0x%04x len: 0x%04x",
+    //    p_setup->wValue >> 8, p_setup->bmRequestType, p_setup->bRequest,
+    //    p_setup->wValue & 0xFF, p_setup->wIndex, p_setup->wLength);
+    
     //determine which descriptor has been asked for
     switch ((p_setup->wValue) >> 8)
     {
