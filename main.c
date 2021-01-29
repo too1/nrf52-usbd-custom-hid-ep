@@ -69,6 +69,7 @@ NRF_CLI_DEF(m_cli_uart,
 static bool m_send_flag = 0;
 
 #define BTN_DATA_SEND               0
+#define BTN_CUSTOM_DATA_SEND        1
 #define BTN_DATA_KEY_RELEASE        (bsp_event_t)(BSP_EVENT_KEY_LAST + 1)
 
 /**
@@ -156,12 +157,12 @@ static bool m_send_flag = 0;
 #define REMOTE_WU           1
 
 #define USBD_CONFIG_DESCRIPTOR_SIZE   9
-#define USBD_CONFIG_DESCRIPTOR_FULL_SIZE   (9 + (9 + 9 + 7))
+#define USBD_CONFIG_DESCRIPTOR_FULL_SIZE   (9 + (9 + 9 + 7) + (9 + 9 + 7 + 7))
 #define USBD_CONFIG_DESCRIPTOR  \
     0x09,         /* bLength | length of descriptor                                             */\
     0x02,         /* bDescriptorType | descriptor type (CONFIGURATION)                          */\
     USBD_CONFIG_DESCRIPTOR_FULL_SIZE, 0x00,    /* wTotalLength | total length of descriptor(s)  */\
-    0x01,         /* bNumInterfaces                                                             */\
+    0x02,         /* bNumInterfaces                                                             */\
     0x01,         /* bConfigurationValue                                                        */\
     0x00,         /* index of string Configuration | configuration string index (not supported) */\
     0x80| (((DEVICE_SELF_POWERED) ? 1U:0U)<<6) | (((REMOTE_WU) ? 1U:0U)<<5), /* bmAttributes    */\
@@ -176,8 +177,8 @@ static bool m_send_flag = 0;
     0x03,         /* bInterfaceClass | interface class (3..defined by USB spec: HID)                  */\
     0x00,         /* bInterfaceSubClass |interface sub-class (0.. no boot interface)                  */\
     0x02,         /* bInterfaceProtocol | interface protocol (1..defined by USB spec: mouse)          */\
-    0x00          /* interface string index (not supported)                                           */
-
+    0x00          /* interface string index (not supported)      */     
+                                    
 /**
  * HID Table must normally be between Interface and EndPoint Descriptor
  * as written in HID spec§7.1 but it doesn't work with OSR2.1
@@ -200,6 +201,42 @@ static bool m_send_flag = 0;
     0x08,0x00,    /* bMaxPacketSizeLowByte,bMaxPacketSizeHighByte | maximum packet size (8 bytes) */\
     0x08          /* bInterval | polling interval (10ms)                                          */
 
+#define USBD_INTERFACE1_DESCRIPTOR  \
+    0x09,         /* bLength                                                                          */\
+    0x04,         /* bDescriptorType | descriptor type (INTERFACE)                                    */\
+    0x01,         /* bInterfaceNumber                                                                 */\
+    0x00,         /* bAlternateSetting                                                                */\
+    0x02,         /* bNumEndpoints | number of endpoints (1)                                          */\
+    0x03,         /* bInterfaceClass | interface class (3..defined by USB spec: HID)                  */\
+    0x00,         /* bInterfaceSubClass |interface sub-class (0.. no boot interface)                  */\
+    0x00,         /* bInterfaceProtocol | interface protocol (1..defined by USB spec: mouse)          */\
+    0x00          /* interface string index (not supported)    */
+
+#define USBD_HID1_DESCRIPTOR  \
+    0x09,         /* bLength | length of descriptor (9 bytes)                    */\
+    0x21,         /* bHIDDescriptor | descriptor type (HID)                      */\
+    0x11, 0x01,   /* HID wBcdHID | Spec version 01.11                            */\
+    0x00,         /* bCountryCode | HW Target country                            */\
+    0x01,         /* bNumDescriptors | Number of HID class descriptors to follow */\
+    0x22,         /* bDescriptorType | Report descriptor type is 0x22 (report)   */\
+    (uint8_t)(USBD_CUSTOM_REPORT_DESCRIPTOR_SIZE),      /* Total length of Report descr., low byte */ \
+    (uint8_t)(USBD_CUSTOM_REPORT_DESCRIPTOR_SIZE / 256) /* Total length of Report descr., high byte */
+
+#define USBD_ENDPOINT2_DESCRIPTOR  \
+    0x07,         /* bLength | length of descriptor (7 bytes)                                     */\
+    0x05,         /* bDescriptorType | descriptor type (ENDPOINT)                                 */\
+    0x82,         /* bEndpointAddress | endpoint address (IN endpoint, endpoint 2)                */\
+    0x03,         /* bmAttributes | endpoint attributes (interrupt)                               */\
+    0x20,0x00,    /* bMaxPacketSizeLowByte,bMaxPacketSizeHighByte | maximum packet size (32 bytes) */\
+    0x08          /* bInterval | polling interval (10ms)    */   
+
+#define USBD_ENDPOINT2_OUT_DESCRIPTOR  \
+    0x07,         /* bLength | length of descriptor (7 bytes)                                     */\
+    0x05,         /* bDescriptorType | descriptor type (ENDPOINT)                                 */\
+    0x02,         /* bEndpointAddress | endpoint address (OUT endpoint, endpoint 2)                */\
+    0x03,         /* bmAttributes | endpoint attributes (interrupt)                               */\
+    0x20,0x00,    /* bMaxPacketSizeLowByte,bMaxPacketSizeHighByte | maximum packet size (32 bytes) */\
+    0x08          /* bInterval | polling interval (10ms)    */   
 
 /**
  * String config descriptor
@@ -305,6 +342,20 @@ static bool m_send_flag = 0;
     0xC0,           /* end collection                                                               */\
     0xC0            /* End Collection                                                               */
 
+#define USBD_CUSTOM_REPORT_DESCRIPTOR_SIZE  46
+#define USBD_CUSTOM_REPORT_DESCRIPTOR \
+    0x06, 0x00, 0xff,              /* USAGE_PAGE (Vendor Defined Page 1)*/\
+    0x09, 0x01,                    /* USAGE (Vendor Usage 1)*/\
+    0xa1, 0x01,                    /* COLLECTION (Application)*/\
+    0x15, 0x00,                    /*   LOGICAL_MINIMUM (0)*/\
+    0x26, 0xff, 0x00,              /*   LOGICAL_MAXIMUM (255)*/\
+    0x75, 0x08,                    /*   REPORT_SIZE (8)*/\
+    0x95, 0x40,                    /*   REPORT_COUNT (64)*/\
+    0x09, 0x01,                    /*   USAGE (Vendor Usage 1)*/\
+    0x81, 0x00,                    /*   INPUT (Data,Ary,Abs)*/\
+    0x09, 0x01,                    /*   USAGE (Vendor Usage 1)*/\
+    0x91, 0x00,                    /*   OUTPUT (Data,Ary,Abs)*/\
+    0xc0                           /* END_COLLECTION*/
 
 static const uint8_t get_descriptor_device[] = {
     USBD_DEVICE_DESCRIPTOR
@@ -314,7 +365,11 @@ static const uint8_t get_descriptor_configuration[] = {
     USBD_CONFIG_DESCRIPTOR,
     USBD_INTERFACE0_DESCRIPTOR,
     USBD_HID0_DESCRIPTOR,
-    USBD_ENDPOINT1_DESCRIPTOR
+    USBD_ENDPOINT1_DESCRIPTOR,
+    USBD_INTERFACE1_DESCRIPTOR,
+    USBD_HID1_DESCRIPTOR,
+    USBD_ENDPOINT2_DESCRIPTOR,
+    USBD_ENDPOINT2_OUT_DESCRIPTOR
 };
 static const uint8_t get_descriptor_string_lang[] = {
     USBD_STRING_LANG
@@ -357,7 +412,14 @@ static const uint8_t get_status_ep_active_resp[] = {0, 0};
     &get_descriptor_configuration[9+GET_INTERFACE_DESC_SIZE]
 #define get_descriptor_endpoint_1  \
     &get_descriptor_configuration[9+GET_INTERFACE_DESC_SIZE+GET_HID_DESC_SIZE]
-
+#define get_descriptor_interface_1  \
+    &get_descriptor_configuration[9+GET_INTERFACE_DESC_SIZE+GET_HID_DESC_SIZE+GET_ENDPOINT_DESC_SIZE]
+#define get_descriptor_hid_1  \
+    &get_descriptor_configuration[9+GET_INTERFACE_DESC_SIZE+GET_HID_DESC_SIZE+GET_ENDPOINT_DESC_SIZE+GET_INTERFACE_DESC_SIZE]
+#define get_descriptor_endpoint_2  \
+    &get_descriptor_configuration[9+GET_INTERFACE_DESC_SIZE+GET_HID_DESC_SIZE+GET_ENDPOINT_DESC_SIZE+GET_INTERFACE_DESC_SIZE+GET_HID_DESC_SIZE]
+#define get_descriptor_endpoint_2_out  \
+    &get_descriptor_configuration[9+GET_INTERFACE_DESC_SIZE+GET_HID_DESC_SIZE+GET_ENDPOINT_DESC_SIZE+GET_INTERFACE_DESC_SIZE+GET_HID_DESC_SIZE+GET_ENDPOINT_DESC_SIZE]
 /**
  * @brief USB configured flag
  *
@@ -577,6 +639,12 @@ static void usbd_setup_ClearFeature(nrf_drv_usbd_setup_t const * const p_setup)
                 nrf_drv_usbd_setup_clear();
                 return;
             }
+            else if((p_setup->wIndex) == NRF_DRV_USBD_EPIN2)
+            {
+                nrf_drv_usbd_ep_stall_clear(NRF_DRV_USBD_EPIN2);
+                nrf_drv_usbd_setup_clear();
+                return;
+            }
         }
     }
     else if ((p_setup->bmRequestType) ==  0x0) // standard request, recipient=device
@@ -591,7 +659,8 @@ static void usbd_setup_ClearFeature(nrf_drv_usbd_setup_t const * const p_setup)
             }
         }
     }
-    NRF_LOG_ERROR("Unknown feature to clear");
+    NRF_LOG_ERROR("Unknown feature to clear: reqtype %i, wValue %i, wIndex %i", 
+        p_setup->bmRequestType, p_setup->wValue, p_setup->wIndex);
     nrf_drv_usbd_setup_stall();
 }
 
@@ -627,6 +696,10 @@ static void usbd_setup_SetFeature(nrf_drv_usbd_setup_t const * const p_setup)
 
 static void usbd_setup_GetDescriptor(nrf_drv_usbd_setup_t const * const p_setup)
 {
+    NRF_LOG_INFO("getDescriptor 0x%02x, type: 0x%02x value: 0x%02x",
+        p_setup->wValue >> 8,
+        p_setup->bmRequestType,
+        p_setup->wValue & 0xFF);
     //determine which descriptor has been asked for
     switch ((p_setup->wValue) >> 8)
     {
@@ -738,7 +811,7 @@ static void usbd_setup_GetDescriptor(nrf_drv_usbd_setup_t const * const p_setup)
         break; // Not supported - go to stall
     }
 
-    NRF_LOG_ERROR("Unknown descriptor requested: 0x%2x, type: 0x%2x or value: 0x%2x",
+    NRF_LOG_ERROR("Unknown descriptor requested: 0x%02x, type: 0x%02x or value: 0x%02x",
         p_setup->wValue >> 8,
         p_setup->bmRequestType,
         p_setup->wValue & 0xFF);
